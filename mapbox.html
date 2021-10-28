@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>Document</title>
+    <!-- <script src="https://api.mapbox.com/mapbox.js/v3.3.1/mapbox.js"></script>
+    <link
+      href="https://api.mapbox.com/mapbox.js/v3.3.1/mapbox.css"
+      rel="stylesheet"
+    /> -->
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.5.1/mapbox-gl.js"></script>
+    <link
+      href="https://api.mapbox.com/mapbox-gl-js/v2.5.1/mapbox-gl.css"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        padding: 0;
+        margin: 0;
+      }
+      html,
+      body,
+      #map {
+        height: 100%;
+        width: 100vw;
+      }
+
+      /* #pickup_marker {
+        transform: translate(50vw, 50vh) !important;
+      } */
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+
+    <script>
+      let waypoints;
+      let allLines;
+      let totalWayPoints;
+      let pointsAdded;
+
+      // Driver Marker
+      var el = document.createElement("img");
+      el.style.width = "35px";
+      el.style.height = "35px";
+      el.setAttribute("src", "./car-aerial.png");
+
+      var driverMarker = new mapboxgl.Marker({
+        color: "#000000",
+        draggable: false,
+        element: el,
+        pitchAlignment: "map",
+        rotationAlignment: "map",
+      });
+      // .setLngLat([
+      //   position.coords.longitude - 0.002,
+      //   position.coords.latitude - 0.002,
+      // ])
+      // .addTo(map);
+
+      var pickupMarker = document.createElement("div");
+      pickupMarker.style.marginLeft = "-20px";
+      pickupMarker.style.marginTop = "-40px";
+      pickupMarker.style.display = "flex";
+      pickupMarker.style.flexDirection = "column";
+      pickupMarker.style.alignItems = "center";
+      pickupMarker.setAttribute("id", "pickup_marker");
+
+      var outerCircle = document.createElement("div");
+      outerCircle.style.width = "30px";
+      outerCircle.style.height = "30px";
+      outerCircle.style.backgroundColor = "#080808";
+      outerCircle.style.borderRadius = "30px";
+      outerCircle.style.display = "flex";
+      outerCircle.style.justifyContent = "center";
+      outerCircle.style.alignItems = "center";
+
+      var innerCircle = document.createElement("div");
+      innerCircle.style.width = "10px";
+      innerCircle.style.height = "10px";
+      innerCircle.style.backgroundColor = "white";
+      innerCircle.style.borderRadius = "10px";
+      innerCircle.s;
+
+      var tipLine = document.createElement("div");
+      tipLine.style.width = "2px";
+      tipLine.style.height = "16px";
+      tipLine.style.backgroundColor = "#080808";
+
+      outerCircle.appendChild(innerCircle);
+      pickupMarker.appendChild(outerCircle);
+      pickupMarker.appendChild(tipLine);
+
+      var pickupMakerIsVisible = false;
+
+      const PickupMarkerControl = new mapboxgl.Marker({
+        draggable: false,
+        element: pickupMarker,
+        pitchAlignment: "map",
+        rotationAlignment: "map",
+      });
+      // .setLngLat([0, 0]);
+
+      var endPoint = new mapboxgl.Marker({
+        color: "#000000",
+        draggable: false,
+        pitchAlignment: "map",
+        rotationAlignment: "map",
+      });
+
+      var startPoint = new mapboxgl.Marker({
+        color: "#000000",
+        draggable: false,
+        pitchAlignment: "map",
+        rotationAlignment: "map",
+      });
+
+      // document.getElementById("map").appendChild(pickupMarker);
+
+      const geojson = {
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            geometry: {
+              type: "LineString",
+              coordinates: [],
+            },
+          },
+        ],
+      };
+
+      mapboxgl.accessToken =
+        "pk.eyJ1IjoiY2FsZWIxMjNlZGVtIiwiYSI6ImNqb2hzd2cwYzAxb2czdmxmbjRrcTlkOWYifQ.nKUP4PQMhmaRHelK4XTucg";
+
+      var map = new mapboxgl.Map({
+        container: "map",
+        style: "mapbox://styles/caleb123edem/cj9osou6j4ojs2sn5xajn4psf",
+        attributionControl: false,
+        // center: [-2.004445, 5.291557],
+        zoom: 15,
+      });
+
+      map.addControl(
+        new mapboxgl.NavigationControl({
+          showZoom: false,
+          //   visualizePitch: true,
+        })
+      );
+
+      const geolocate = new mapboxgl.GeolocateControl({
+        positionOptions: {
+          enableHighAccuracy: true,
+        },
+        trackUserLocation: true,
+        showUserHeading: true,
+        showAccuracyCircle: false,
+      });
+
+      map.addControl(geolocate, "bottom-right");
+      geolocate.on("geolocate", (position) => {
+        console.log("A geolocate event has occurred.");
+        console.log(position);
+      });
+
+      function DrawLine() {
+        var point = allLines[pointsAdded];
+
+        // geojson.features[0].geometry.coordinates.push([point[0], point[1]]);
+        geojson.features[0].geometry.coordinates = allLines;
+        // then update the map
+        map.getSource("line").setData(geojson);
+
+        // map.flyTo({
+        //   center: [point[0], point[1]],
+        //   zoom: 15,
+        // });
+
+        // if (++pointsAdded < totalWayPoints) setTimeout(DrawLine, 1);
+        // else {
+        const coordinates = geojson.features[0].geometry.coordinates;
+
+        // Create a 'LngLatBounds' with both corners at the first coordinate.
+        const bounds = new mapboxgl.LngLatBounds(
+          coordinates[0],
+          coordinates[0]
+        );
+
+        // Extend the 'LngLatBounds' to include every coordinate in the bounds result.
+        for (const coord of coordinates) {
+          bounds.extend(coord);
+        }
+
+        map.fitBounds(bounds, {
+          padding: 20,
+        });
+
+        if (waypoints) {
+          endPoint.setLngLat(allLines[allLines.length - 1]).addTo(map);
+          PickupMarkerControl.setLngLat(allLines[allLines.length - 1]);
+          startPoint.setLngLat(allLines[0]).addTo(map);
+        }
+        // }
+      }
+
+      map.on("load", () => {
+        console.log("A load event occurred.");
+        geolocate.trigger();
+        map.addSource("line", {
+          type: "geojson",
+          data: geojson,
+        });
+
+        map.addLayer({
+          id: "line-animation",
+          type: "line",
+          source: "line",
+          layout: {
+            "line-cap": "round",
+            "line-join": "round",
+          },
+          paint: {
+            "line-color": "rgb(0,112,201)",
+            "line-width": 10,
+            "line-opacity": 0.8,
+            "line-blur": 2,
+          },
+        });
+
+        if (navigator.appVersion.includes("Android")) {
+          document.addEventListener("message", function (msg) {
+            let result = msg.data;
+            switch (result) {
+              case "Destination":
+                break;
+
+              default:
+                geolocate.trigger();
+                break;
+            }
+            alert(msg.data);
+          });
+        } else {
+          window.addEventListener("message", function (msg) {
+            let result = JSON.parse(msg.data);
+            switch (result.type) {
+              case "Destination":
+                geojson.features[0].geometry.coordinates = [];
+                waypoints = result.waypoints.data;
+                allLines = waypoints.features[0].geometry.coordinates[0];
+                totalWayPoints = allLines.length;
+                pointsAdded = 0;
+                ShowRoute();
+                break;
+              case "Driver Arriving":
+                geojson.features[0].geometry.coordinates = [];
+                map.getSource("line").setData(geojson);
+                driverMarker.setLngLat([
+                  result.driver_location.longitude,
+                  result.driver_location.latitude,
+                ]);
+                driverMarker.addTo(map);
+                startPoint.remove();
+                endPoint.remove();
+                map.flyTo({
+                  center: [
+                    result.driver_location.longitude,
+                    result.driver_location.latitude,
+                  ],
+                  zoom: 15,
+                });
+                break;
+              case "Driver Waiting":
+                geojson.features[0].geometry.coordinates = [];
+                map.getSource("line").setData(geojson);
+                driverMarker.setLngLat([
+                  result.driver_location.longitude,
+                  result.driver_location.latitude,
+                ]);
+                driverMarker.addTo(map);
+                map.flyTo({
+                  center: [
+                    result.driver_location.longitude,
+                    result.driver_location.latitude,
+                  ],
+                  zoom: 16,
+                });
+                break;
+              case "Pickup Location":
+                const lngLat = map.getCenter();
+                let routes = waypoints.properties.waypoints[1];
+                let newCenter = [routes.lon, routes.lat];
+                map.setCenter(newCenter);
+                PickupMarkerControl.setLngLat(newCenter).addTo(map);
+                pickupMakerIsVisible = true;
+                break;
+              case "Confirm Pickup":
+                PickupMarkerControl.remove();
+                pickupMakerIsVisible = false;
+                break;
+              case "On Trip":
+                break;
+              case "Current Location":
+                startPoint.remove();
+                endPoint.remove();
+                geojson.features[0].geometry.coordinates = [];
+                map.getSource("line").setData(geojson);
+                geolocate.trigger();
+                break;
+              case "Start Trip":
+                // startPoint.remove()
+                endPoint.remove();
+                // geolocate.trigger();
+                break;
+              case "End Trip":
+                startPoint.remove();
+                endPoint.remove();
+                geojson.features[0].geometry.coordinates = [];
+                map.getSource("line").setData(geojson);
+                // geolocate.trigger();
+                break;
+              default:
+                // geolocate.trigger();
+                break;
+            }
+            // alert(msg.data);
+          });
+        }
+      });
+
+      map.on("dragend", () => {
+        console.log("A dragend event occurred.");
+        if (pickupMakerIsVisible) {
+          let lngLat = map.getCenter();
+          send_message_to_native({
+            type: "Pickup Location",
+            longitude: lngLat.lng,
+            latitude: lngLat.lat,
+          });
+        }
+      });
+
+      map.on("move", () => {
+        // console.log("A move event occurred.");
+        if (pickupMakerIsVisible) {
+          const lngLat = map.getCenter();
+          PickupMarkerControl.setLngLat([lngLat.lng, lngLat.lat]).addTo(map);
+        }
+      });
+
+      function send_message_to_native(data) {
+        window.ReactNativeWebView.postMessage(JSON.stringify(data));
+      }
+
+      function ShowRoute() {
+        DrawLine();
+      }
+    </script>
+  </body>
+</html>
+
+<!-- {
+  "auth_code": "103308017935",
+  "reference_id": "CTX00000055",
+  "secret_code": "2831",
+  "amount": "50",
+  "trnx_code": "CTX00000055"
+} -->
