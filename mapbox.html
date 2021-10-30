@@ -149,7 +149,8 @@
       map.addControl(
         new mapboxgl.NavigationControl({
           showZoom: false,
-          //   visualizePitch: true,
+          // visualizePitch: false,
+          showCompass: false,
         })
       );
 
@@ -168,7 +169,7 @@
         console.log(position);
       });
 
-      function DrawLine() {
+      function DrawLine(isDriver = false) {
         var point = allLines[pointsAdded];
 
         // geojson.features[0].geometry.coordinates.push([point[0], point[1]]);
@@ -203,7 +204,7 @@
         if (waypoints) {
           endPoint.setLngLat(allLines[allLines.length - 1]).addTo(map);
           PickupMarkerControl.setLngLat(allLines[allLines.length - 1]);
-          startPoint.setLngLat(allLines[0]).addTo(map);
+          if (!isDriver) startPoint.setLngLat(allLines[0]).addTo(map);
         }
         // }
       }
@@ -249,11 +250,21 @@
         switch (result.type) {
           case "Destination":
             geojson.features[0].geometry.coordinates = [];
+            map.getSource("line").setData(geojson);
             waypoints = result.waypoints.data;
             allLines = waypoints.features[0].geometry.coordinates[0];
             totalWayPoints = allLines.length;
             pointsAdded = 0;
-            ShowRoute();
+            DrawLine();
+            break;
+          case "Driver Destination":
+            geojson.features[0].geometry.coordinates = [];
+            map.getSource("line").setData(geojson);
+            waypoints = result.waypoints.data;
+            allLines = waypoints.features[0].geometry.coordinates[0];
+            totalWayPoints = allLines.length;
+            pointsAdded = 0;
+            DrawLine(true);
             break;
           case "Driver Arriving":
             geojson.features[0].geometry.coordinates = [];
@@ -291,7 +302,7 @@
             break;
           case "Pickup Location":
             const lngLat = map.getCenter();
-            let routes = waypoints.properties.waypoints[1];
+            let routes = waypoints.properties.waypoints[0];
             let newCenter = [routes.lon, routes.lat];
             map.setCenter(newCenter);
             PickupMarkerControl.setLngLat(newCenter).addTo(map);
@@ -301,7 +312,22 @@
             PickupMarkerControl.remove();
             pickupMakerIsVisible = false;
             break;
+          case "Driver On Trip":
+            geolocate.trigger();
+            break;
           case "On Trip":
+            driverMarker.setLngLat([
+              result.driver_location.longitude,
+              result.driver_location.latitude,
+            ]);
+            driverMarker.addTo(map);
+            map.flyTo({
+              center: [
+                result.driver_location.longitude,
+                result.driver_location.latitude,
+              ],
+              zoom: 16,
+            });
             break;
           case "Current Location":
             startPoint.remove();
@@ -313,7 +339,7 @@
           case "Start Trip":
             // startPoint.remove()
             endPoint.remove();
-            // geolocate.trigger();
+            geolocate.trigger();
             break;
           case "End Trip":
             startPoint.remove();
@@ -323,7 +349,13 @@
             // geolocate.trigger();
             break;
           default:
-            // geolocate.trigger();
+            // Reset Map
+            startPoint.remove();
+            endPoint.remove();
+            driverMarker.remove();
+            geojson.features[0].geometry.coordinates = [];
+            map.getSource("line").setData(geojson);
+            geolocate.trigger();
             break;
         }
       }
@@ -352,9 +384,9 @@
         window.ReactNativeWebView.postMessage(JSON.stringify(data));
       }
 
-      function ShowRoute() {
-        DrawLine();
-      }
+      // function ShowRoute() {
+      //   DrawLine();
+      // }
     </script>
   </body>
 </html>
