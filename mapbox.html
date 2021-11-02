@@ -161,12 +161,17 @@
         trackUserLocation: true,
         showUserHeading: true,
         showAccuracyCircle: false,
+        fitBoundsOptions: { maxZoom: 18 },
       });
 
       map.addControl(geolocate, "bottom-right");
       geolocate.on("geolocate", (position) => {
         console.log("A geolocate event has occurred.");
-        console.log(position);
+        console.log(position.coords);
+        // map.flyTo({
+        //   center: [position.coords.longitude, position.coords.latitude],
+        //   zoom: 16,
+        // });
       });
 
       function DrawLine(isDriver = false) {
@@ -203,7 +208,7 @@
 
         if (waypoints) {
           endPoint.setLngLat(allLines[allLines.length - 1]).addTo(map);
-          PickupMarkerControl.setLngLat(allLines[allLines.length - 1]);
+          PickupMarkerControl.setLngLat(allLines[0]);
           if (!isDriver) startPoint.setLngLat(allLines[0]).addTo(map);
         }
         // }
@@ -266,27 +271,29 @@
             pointsAdded = 0;
             DrawLine(true);
             break;
-          case "Driver Arriving":
+          // case "Driver Arriving":
+          //   geojson.features[0].geometry.coordinates = [];
+          //   map.getSource("line").setData(geojson);
+          //   driverMarker.setLngLat([
+          //     result.driver_location.longitude,
+          //     result.driver_location.latitude,
+          //   ]);
+          //   driverMarker.addTo(map);
+          //   startPoint.remove();
+          //   endPoint.remove();
+          //   map.flyTo({
+          //     center: [
+          //       result.driver_location.longitude,
+          //       result.driver_location.latitude,
+          //     ],
+          //     zoom: 15,
+          //   });
+          //   break;
+          case "Driver Location":
             geojson.features[0].geometry.coordinates = [];
             map.getSource("line").setData(geojson);
-            driverMarker.setLngLat([
-              result.driver_location.longitude,
-              result.driver_location.latitude,
-            ]);
-            driverMarker.addTo(map);
             startPoint.remove();
             endPoint.remove();
-            map.flyTo({
-              center: [
-                result.driver_location.longitude,
-                result.driver_location.latitude,
-              ],
-              zoom: 15,
-            });
-            break;
-          case "Driver Waiting":
-            geojson.features[0].geometry.coordinates = [];
-            map.getSource("line").setData(geojson);
             driverMarker.setLngLat([
               result.driver_location.longitude,
               result.driver_location.latitude,
@@ -301,10 +308,15 @@
             });
             break;
           case "Pickup Location":
-            const lngLat = map.getCenter();
-            let routes = waypoints.properties.waypoints[0];
-            let newCenter = [routes.lon, routes.lat];
+            // const lngLat = map.getCenter();
+            // let routes = waypoints.properties.waypoints[0];
+            const pickUpCoords = PickupMarkerControl.getLngLat();
+            let newCenter = [pickUpCoords.lng, pickUpCoords.lat];
+            map.setZoom(18);
             map.setCenter(newCenter);
+            // setTimeout(() => {
+            //   map.setZoom(18);
+            // }, 1500);
             PickupMarkerControl.setLngLat(newCenter).addTo(map);
             pickupMakerIsVisible = true;
             break;
@@ -346,7 +358,7 @@
             endPoint.remove();
             geojson.features[0].geometry.coordinates = [];
             map.getSource("line").setData(geojson);
-            // geolocate.trigger();
+            geolocate.trigger();
             break;
           default:
             // Reset Map
@@ -390,11 +402,3 @@
     </script>
   </body>
 </html>
-
-<!-- {
-  "auth_code": "103308017935",
-  "reference_id": "CTX00000055",
-  "secret_code": "2831",
-  "amount": "50",
-  "trnx_code": "CTX00000055"
-} -->
