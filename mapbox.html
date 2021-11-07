@@ -43,25 +43,13 @@
       let allLines;
       let totalWayPoints;
       let pointsAdded;
+      let PickupType;
 
       // Driver Marker
-      var el = document.createElement("img");
-      el.style.width = "35px";
-      el.style.height = "35px";
-      el.setAttribute("src", "./car-aerial.png");
-
-      var driverMarker = new mapboxgl.Marker({
-        color: "#000000",
-        draggable: false,
-        element: el,
-        pitchAlignment: "map",
-        rotationAlignment: "map",
-      });
-      // .setLngLat([
-      //   position.coords.longitude - 0.002,
-      //   position.coords.latitude - 0.002,
-      // ])
-      // .addTo(map);
+      var carMarker = document.createElement("img");
+      carMarker.style.width = "35px";
+      carMarker.style.height = "35px";
+      carMarker.setAttribute("src", "./car-aerial.png");
 
       var pickupMarker = document.createElement("div");
       pickupMarker.style.marginLeft = "-20px";
@@ -105,6 +93,14 @@
         rotationAlignment: "map",
       });
       // .setLngLat([0, 0]);
+
+      const DriverMarkerControl = new mapboxgl.Marker({
+        color: "#000000",
+        draggable: false,
+        element: carMarker,
+        pitchAlignment: "map",
+        rotationAlignment: "map",
+      });
 
       var endPoint = new mapboxgl.Marker({
         color: "#000000",
@@ -238,6 +234,8 @@
           },
         });
 
+        document.getElementsByClassName("mapboxgl-ctrl-logo")[0].href = "#";
+
         if (navigator.appVersion.includes("Android")) {
           document.addEventListener("message", function (msg) {
             ProcessMapRequest(msg);
@@ -271,34 +269,18 @@
             pointsAdded = 0;
             DrawLine(true);
             break;
-          // case "Driver Arriving":
-          //   geojson.features[0].geometry.coordinates = [];
-          //   map.getSource("line").setData(geojson);
-          //   driverMarker.setLngLat([
-          //     result.driver_location.longitude,
-          //     result.driver_location.latitude,
-          //   ]);
-          //   driverMarker.addTo(map);
-          //   startPoint.remove();
-          //   endPoint.remove();
-          //   map.flyTo({
-          //     center: [
-          //       result.driver_location.longitude,
-          //       result.driver_location.latitude,
-          //     ],
-          //     zoom: 15,
-          //   });
-          //   break;
           case "Driver Location":
             geojson.features[0].geometry.coordinates = [];
             map.getSource("line").setData(geojson);
             startPoint.remove();
             endPoint.remove();
-            driverMarker.setLngLat([
+            if (result.marker_rotation) {
+              DriverMarkerControl.setRotation(result.marker_rotation);
+            }
+            DriverMarkerControl.setLngLat([
               result.driver_location.longitude,
               result.driver_location.latitude,
-            ]);
-            driverMarker.addTo(map);
+            ]).addTo(map);
             map.flyTo({
               center: [
                 result.driver_location.longitude,
@@ -307,16 +289,16 @@
               zoom: 16,
             });
             break;
+          case "Initial Pickup":
+            let mapCenter = map.getCenter();
+            PickupMarkerControl.setLngLat([mapCenter.lng, mapCenter.lat]);
+            break;
           case "Pickup Location":
-            // const lngLat = map.getCenter();
-            // let routes = waypoints.properties.waypoints[0];
+            PickupType = result.pickup_type;
             const pickUpCoords = PickupMarkerControl.getLngLat();
             let newCenter = [pickUpCoords.lng, pickUpCoords.lat];
             map.setZoom(18);
             map.setCenter(newCenter);
-            // setTimeout(() => {
-            //   map.setZoom(18);
-            // }, 1500);
             PickupMarkerControl.setLngLat(newCenter).addTo(map);
             pickupMakerIsVisible = true;
             break;
@@ -328,11 +310,11 @@
             geolocate.trigger();
             break;
           case "On Trip":
-            driverMarker.setLngLat([
+            DriverMarkerControl.setLngLat([
               result.driver_location.longitude,
               result.driver_location.latitude,
             ]);
-            driverMarker.addTo(map);
+            DriverMarkerControl.addTo(map);
             map.flyTo({
               center: [
                 result.driver_location.longitude,
@@ -364,7 +346,7 @@
             // Reset Map
             startPoint.remove();
             endPoint.remove();
-            driverMarker.remove();
+            DriverMarkerControl.remove();
             geojson.features[0].geometry.coordinates = [];
             map.getSource("line").setData(geojson);
             geolocate.trigger();
@@ -380,6 +362,7 @@
             type: "Pickup Location",
             longitude: lngLat.lng,
             latitude: lngLat.lat,
+            pickup_type: PickupType,
           });
         }
       });
@@ -390,6 +373,7 @@
           const lngLat = map.getCenter();
           PickupMarkerControl.setLngLat([lngLat.lng, lngLat.lat]).addTo(map);
         }
+        // DriverMarkerControl.setLngLat([lngLat.lng, lngLat.lat]).addTo(map);
       });
 
       function send_message_to_native(data) {
