@@ -7,26 +7,17 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <link
-      rel="stylesheet"
-      href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
-      integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
-      crossorigin=""
-    />
-    <script
-      src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
-      integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
-      crossorigin=""
-    ></script>
-
-    <link
-      href="https://api.tiles.mapbox.com/mapbox-gl-js/v1.5.0/mapbox-gl.css"
-      rel="stylesheet"
-    />
-    <script src="https://api.tiles.mapbox.com/mapbox-gl-js/v1.5.0/mapbox-gl.js"></script>
-
-    <script src="https://unpkg.com/mapbox-gl-leaflet/leaflet-mapbox-gl.js"></script>
     <title>Document</title>
+    <!-- <script src="https://api.mapbox.com/mapbox.js/v3.3.1/mapbox.js"></script>
+    <link
+      href="https://api.mapbox.com/mapbox.js/v3.3.1/mapbox.css"
+      rel="stylesheet"
+    /> -->
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.5.1/mapbox-gl.js"></script>
+    <link
+      href="https://api.mapbox.com/mapbox-gl-js/v2.5.1/mapbox-gl.css"
+      rel="stylesheet"
+    />
     <style>
       body {
         padding: 0;
@@ -38,400 +29,360 @@
         height: 100%;
         width: 100vw;
       }
-      .driver_icon {
-        /* transform: rotate(75deg); */
-      }
+
+      /* #pickup_marker {
+        transform: translate(50vw, 50vh) !important;
+      } */
     </style>
   </head>
   <body>
     <div id="map"></div>
 
     <script>
-      var waypoints = {
+      let waypoints;
+      let allLines;
+      let totalWayPoints;
+      let pointsAdded;
+      let PickupType;
+
+      // Driver Marker
+      var carMarker = document.createElement("img");
+      carMarker.style.width = "35px";
+      carMarker.style.height = "35px";
+      carMarker.setAttribute("src", "./car-aerial.png");
+
+      var pickupMarker = document.createElement("div");
+      pickupMarker.style.marginLeft = "-20px";
+      pickupMarker.style.marginTop = "-40px";
+      pickupMarker.style.display = "flex";
+      pickupMarker.style.flexDirection = "column";
+      pickupMarker.style.alignItems = "center";
+      pickupMarker.setAttribute("id", "pickup_marker");
+
+      var outerCircle = document.createElement("div");
+      outerCircle.style.width = "30px";
+      outerCircle.style.height = "30px";
+      outerCircle.style.backgroundColor = "#080808";
+      outerCircle.style.borderRadius = "30px";
+      outerCircle.style.display = "flex";
+      outerCircle.style.justifyContent = "center";
+      outerCircle.style.alignItems = "center";
+
+      var innerCircle = document.createElement("div");
+      innerCircle.style.width = "10px";
+      innerCircle.style.height = "10px";
+      innerCircle.style.backgroundColor = "white";
+      innerCircle.style.borderRadius = "10px";
+      innerCircle.s;
+
+      var tipLine = document.createElement("div");
+      tipLine.style.width = "2px";
+      tipLine.style.height = "16px";
+      tipLine.style.backgroundColor = "#080808";
+
+      outerCircle.appendChild(innerCircle);
+      pickupMarker.appendChild(outerCircle);
+      pickupMarker.appendChild(tipLine);
+
+      var pickupMakerIsVisible = false;
+
+      const PickupMarkerControl = new mapboxgl.Marker({
+        draggable: false,
+        element: pickupMarker,
+        pitchAlignment: "map",
+        rotationAlignment: "map",
+      });
+      // .setLngLat([0, 0]);
+
+      const DriverMarkerControl = new mapboxgl.Marker({
+        color: "#000000",
+        draggable: false,
+        element: carMarker,
+        pitchAlignment: "map",
+        rotationAlignment: "map",
+      });
+
+      var endPoint = new mapboxgl.Marker({
+        color: "#000000",
+        draggable: false,
+        pitchAlignment: "map",
+        rotationAlignment: "map",
+      });
+
+      var startPoint = new mapboxgl.Marker({
+        color: "#000000",
+        draggable: false,
+        pitchAlignment: "map",
+        rotationAlignment: "map",
+      });
+
+      // document.getElementById("map").appendChild(pickupMarker);
+
+      const geojson = {
+        type: "FeatureCollection",
         features: [
           {
             type: "Feature",
-            properties: {
-              mode: "drive",
-              waypoints: [
-                {
-                  location: [-2.004149, 5.291633],
-                  original_index: 0,
-                },
-                {
-                  location: [-2.008324, 5.293106],
-                  original_index: 1,
-                },
-              ],
-              distance: 2385,
-              time: 272.935,
-              legs: [
-                {
-                  distance: 2385,
-                  time: 272.935,
-                  steps: [
-                    {
-                      instruction: {
-                        text: "Drive north.",
-                      },
-                      from_index: 0,
-                      to_index: 12,
-                      distance: 202,
-                      time: 29.151,
-                    },
-                    {
-                      instruction: {
-                        text: "Turn left.",
-                      },
-                      from_index: 12,
-                      to_index: 23,
-                      distance: 154,
-                      time: 23.261,
-                    },
-                    {
-                      instruction: {
-                        text: "Turn left onto North Tarkwa Highway/IR6.",
-                      },
-                      from_index: 23,
-                      to_index: 32,
-                      distance: 360,
-                      time: 22.806,
-                    },
-                    {
-                      instruction: {
-                        text: "Turn left onto UMaT Library Road.",
-                      },
-                      from_index: 32,
-                      to_index: 41,
-                      distance: 293,
-                      time: 32.391,
-                    },
-                    {
-                      instruction: {
-                        text: "Turn left.",
-                      },
-                      from_index: 41,
-                      to_index: 43,
-                      distance: 31,
-                      time: 10.369,
-                    },
-                    {
-                      instruction: {
-                        text: "Keep right to take KT - Chambers Road.",
-                      },
-                      from_index: 43,
-                      to_index: 47,
-                      distance: 94,
-                      time: 13.796,
-                    },
-                    {
-                      instruction: {
-                        text: "Turn left.",
-                      },
-                      from_index: 47,
-                      to_index: 56,
-                      distance: 86,
-                      time: 11.617,
-                    },
-                    {
-                      instruction: {
-                        text: "Turn right.",
-                      },
-                      from_index: 56,
-                      to_index: 70,
-                      distance: 128,
-                      time: 13.314,
-                    },
-                    {
-                      instruction: {
-                        text: "Turn left.",
-                      },
-                      from_index: 70,
-                      to_index: 109,
-                      distance: 943,
-                      time: 105.089,
-                    },
-                    {
-                      instruction: {
-                        text: "Turn right.",
-                      },
-                      from_index: 109,
-                      to_index: 116,
-                      distance: 93,
-                      time: 11.137,
-                    },
-                    {
-                      instruction: {
-                        text: "Your destination is on the right.",
-                      },
-                      from_index: 116,
-                      to_index: 116,
-                      distance: 0,
-                      time: 0,
-                    },
-                  ],
-                },
-              ],
-            },
             geometry: {
-              type: "MultiLineString",
-              coordinates: [
-                [
-                  [-2.004445, 5.291557],
-                  [-2.004568, 5.292033],
-                  [-2.004565, 5.292068],
-                  [-2.004546, 5.292117],
-                  [-2.004507, 5.292163],
-                  [-2.004377, 5.292263],
-                  [-2.004187, 5.292361],
-                  [-2.003955, 5.292451],
-                  [-2.003811, 5.292502],
-                  [-2.003734, 5.292535],
-                  [-2.003684, 5.292541],
-                  [-2.003606, 5.292552],
-                  [-2.003412, 5.292556],
-                  [-2.003388, 5.292587],
-                  [-2.00328, 5.292752],
-                  [-2.003189, 5.292981],
-                  [-2.00313, 5.293183],
-                  [-2.003025, 5.293455],
-                  [-2.00297, 5.29354],
-                  [-2.002948, 5.293561],
-                  [-2.00291, 5.293573],
-                  [-2.002879, 5.293569],
-                  [-2.002785, 5.293525],
-                  [-2.002705, 5.293471],
-                  [-2.002534, 5.293736],
-                  [-2.00231, 5.294077],
-                  [-2.0022, 5.294229],
-                  [-2.0019, 5.294647],
-                  [-2.001538, 5.295175],
-                  [-2.001337, 5.29547],
-                  [-2.00108, 5.295842],
-                  [-2.000967, 5.296002],
-                  [-2.00087, 5.296143],
-                  [-2.00112, 5.296525],
-                  [-2.001295, 5.296829],
-                  [-2.001513, 5.297252],
-                  [-2.001712, 5.297558],
-                  [-2.00199, 5.297967],
-                  [-2.002129, 5.29823],
-                  [-2.002144, 5.298267],
-                  [-2.002155, 5.298329],
-                  [-2.002166, 5.29842],
-                  [-2.002314, 5.298313],
-                  [-2.002392, 5.298258],
-                  [-2.002397, 5.298272],
-                  [-2.002517, 5.29856],
-                  [-2.002631, 5.298813],
-                  [-2.002751, 5.299023],
-                  [-2.002797, 5.299015],
-                  [-2.002863, 5.299007],
-                  [-2.002917, 5.298997],
-                  [-2.002984, 5.298976],
-                  [-2.003148, 5.298872],
-                  [-2.00326, 5.298758],
-                  [-2.00328, 5.298699],
-                  [-2.003284, 5.298639],
-                  [-2.003296, 5.298575],
-                  [-2.003366, 5.298518],
-                  [-2.003471, 5.29846],
-                  [-2.003536, 5.298433],
-                  [-2.003585, 5.29844],
-                  [-2.003607, 5.298459],
-                  [-2.003622, 5.298482],
-                  [-2.003638, 5.298537],
-                  [-2.003662, 5.298575],
-                  [-2.003715, 5.29862],
-                  [-2.003803, 5.298715],
-                  [-2.00387, 5.2988],
-                  [-2.003896, 5.298906],
-                  [-2.003893, 5.299008],
-                  [-2.00388, 5.299153],
-                  [-2.004022, 5.299065],
-                  [-2.004175, 5.299028],
-                  [-2.004275, 5.29904],
-                  [-2.004367, 5.299085],
-                  [-2.004459, 5.299149],
-                  [-2.004532, 5.299212],
-                  [-2.004589, 5.299258],
-                  [-2.004714, 5.299253],
-                  [-2.004847, 5.299245],
-                  [-2.004942, 5.299206],
-                  [-2.005083, 5.299094],
-                  [-2.005179, 5.298851],
-                  [-2.005205, 5.298782],
-                  [-2.005414, 5.298314],
-                  [-2.005623, 5.297815],
-                  [-2.005684, 5.297669],
-                  [-2.005763, 5.297432],
-                  [-2.005913, 5.297142],
-                  [-2.006008, 5.296917],
-                  [-2.006069, 5.296714],
-                  [-2.006138, 5.296459],
-                  [-2.006208, 5.296173],
-                  [-2.006332, 5.29587],
-                  [-2.006499, 5.295715],
-                  [-2.006776, 5.295353],
-                  [-2.006932, 5.295024],
-                  [-2.007009, 5.294828],
-                  [-2.007043, 5.294629],
-                  [-2.007052, 5.29447],
-                  [-2.006989, 5.294175],
-                  [-2.006975, 5.294083],
-                  [-2.006898, 5.29387],
-                  [-2.006874, 5.293754],
-                  [-2.006874, 5.293638],
-                  [-2.006902, 5.293545],
-                  [-2.007009, 5.293366],
-                  [-2.007271, 5.293019],
-                  [-2.007323, 5.292955],
-                  [-2.007627, 5.292763],
-                  [-2.007669, 5.292762],
-                  [-2.007693, 5.29277],
-                  [-2.007726, 5.292788],
-                  [-2.007992, 5.292766],
-                  [-2.008244, 5.292777],
-                  [-2.008393, 5.292803],
-                  [-2.008447, 5.292827],
-                ],
-              ],
+              type: "LineString",
+              coordinates: [],
             },
           },
         ],
-        properties: {
-          mode: "drive",
-          waypoints: [
-            {
-              lat: 5.29163315,
-              lon: -2.0041498172423413,
-            },
-            {
-              lat: 5.293106,
-              lon: -2.0083248,
-            },
-          ],
-        },
-        type: "FeatureCollection",
       };
 
-      var allLines = waypoints.features[0].geometry.coordinates[0];
-      console.log(waypoints.features[0].geometry.coordinates[0]);
-      console.log(allLines.length);
-      var map = L.map("map", {
-        touchZoom: true,
-      }).setView([5.29163315, -2.0041498172423413], 14);
-      // the attribution is required for the Geoapify Free tariff plan
-      map.attributionControl.setPrefix("");
-      // .addAttribution(
-      //   'Powered by <a href="https://www.geoapify.com/" target="_blank">Geoapify</a> | © OpenStreetMap <a href="https://www.openstreetmap.org/copyright" target="_blank">contributors</a>'
-      // );
-      map.zoomControl.remove();
+      mapboxgl.accessToken =
+        "pk.eyJ1IjoiY2FsZWIxMjNlZGVtIiwiYSI6ImNqb2hzd2cwYzAxb2czdmxmbjRrcTlkOWYifQ.nKUP4PQMhmaRHelK4XTucg";
 
-      // install leaflet-mapbox-gl plugin
-      var gl = L.mapboxGL({
-        style:
-          "https://maps.geoapify.com/v1/styles/klokantech-basic/style.json?apiKey=f6890deda366451cabef67e04a9e6a67",
-        accessToken:
-          "pk.eyJ1IjoiY2FsZWIxMjNlZGVtIiwiYSI6ImNqb2hzd2cwYzAxb2czdmxmbjRrcTlkOWYifQ.nKUP4PQMhmaRHelK4XTucg",
-      }).addTo(map);
-
-      var myIcon = L.icon({
-        iconUrl: "car-aerial.png",
-        iconSize: [35, 35],
-        iconAnchor: [18, 18],
-        // popupAnchor: [-3, -76],
-        className: "driver_icon",
-        // shadowUrl: "my-icon-shadow.png",
-        // shadowSize: [68, 95],
-        // shadowAnchor: [22, 94],
+      var map = new mapboxgl.Map({
+        container: "map",
+        style: "mapbox://styles/caleb123edem/cj9osou6j4ojs2sn5xajn4psf",
+        attributionControl: false,
+        // center: [-2.004445, 5.291557],
+        zoom: 15,
       });
 
-      var polyline = L.polyline([], {
-        color: "rgb(0,112,201)",
-        smoothFactor: 1,
-        weight: 8,
-        opacity: 0.6,
-      }).addTo(map);
-      var totalWayPoints = allLines.length;
-      var pointsAdded = 0;
+      map.addControl(
+        new mapboxgl.NavigationControl({
+          showZoom: false,
+          // visualizePitch: false,
+          showCompass: true,
+        })
+      );
 
-      // map.locate({ setView: true, maxZoom: 16, watch: true });
-      L.marker([5.291557, -2.004445], { icon: myIcon }).addTo(map);
-      L.marker([5.293106, -2.0083248]).addTo(map);
+      const geolocate = new mapboxgl.GeolocateControl({
+        positionOptions: {
+          enableHighAccuracy: true,
+        },
+        trackUserLocation: true,
+        showUserHeading: true,
+        showAccuracyCircle: false,
+        fitBoundsOptions: { maxZoom: 18 },
+      });
 
-      // L.geoJson(waypoints).addTo(map);
+      map.addControl(geolocate, "bottom-right");
+      geolocate.on("geolocate", (position) => {
+        console.log("A geolocate event has occurred.");
+        console.log(position.coords);
+        // map.flyTo({
+        //   center: [position.coords.longitude, position.coords.latitude],
+        //   zoom: 16,
+        // });
+      });
 
-      // var polyline = gl
-      //   .polyline(waypoints.features[0].geometry.coordinates[0], {
-      //     color: "blue",
-      //   })
-      //   .addTo(map);
-      // map.fitBounds(polyline.getBounds());
-
-      function DrawLine() {
+      function DrawLine(isDriver = false) {
         var point = allLines[pointsAdded];
-        // console.log(point);
-        // console.log(pointsAdded);
-        // console.log(totalWayPoints);
-        polyline.addLatLng(L.latLng(point[1], point[0]));
-        map.setView([point[1], point[0]], 16);
 
-        if (++pointsAdded < totalWayPoints) setTimeout(DrawLine, 10);
-        else map.fitBounds(polyline.getBounds());
+        // geojson.features[0].geometry.coordinates.push([point[0], point[1]]);
+        geojson.features[0].geometry.coordinates = allLines;
+        // then update the map
+        map.getSource("line").setData(geojson);
+
+        // map.flyTo({
+        //   center: [point[0], point[1]],
+        //   zoom: 15,
+        // });
+
+        // if (++pointsAdded < totalWayPoints) setTimeout(DrawLine, 1);
+        // else {
+        const coordinates = geojson.features[0].geometry.coordinates;
+
+        // Create a 'LngLatBounds' with both corners at the first coordinate.
+        const bounds = new mapboxgl.LngLatBounds(
+          coordinates[0],
+          coordinates[0]
+        );
+
+        // Extend the 'LngLatBounds' to include every coordinate in the bounds result.
+        for (const coord of coordinates) {
+          bounds.extend(coord);
+        }
+
+        map.fitBounds(bounds, {
+          padding: 20,
+        });
+
+        if (waypoints) {
+          endPoint.setLngLat(allLines[allLines.length - 1]).addTo(map);
+          PickupMarkerControl.setLngLat(allLines[0]);
+          if (!isDriver) startPoint.setLngLat(allLines[0]).addTo(map);
+        }
+        // }
       }
 
-      function onLocationFound(e) {
-        var radius = e.accuracy;
+      map.on("load", () => {
+        console.log("A load event occurred.");
+        geolocate.trigger();
+        map.addSource("line", {
+          type: "geojson",
+          data: geojson,
+        });
 
-        L.marker(e.latlng, { icon: myIcon }).addTo(map);
+        map.addLayer({
+          id: "line-animation",
+          type: "line",
+          source: "line",
+          layout: {
+            "line-cap": "round",
+            "line-join": "round",
+          },
+          paint: {
+            "line-color": "rgb(0,112,201)",
+            "line-width": 10,
+            "line-opacity": 0.8,
+            "line-blur": 2,
+          },
+        });
 
-        // var line = L.polyline(waypoints.features[0].geometry.coordinates[0]);
-        // line.addTo(map);
+        document.getElementsByClassName("mapboxgl-ctrl-logo")[0].href = "#";
 
-        // L.marker(e.latlng).addTo(map);
-        //   .bindPopup("You are within " + radius + " meters from this point")
-        //   .openPopup();
-
-        // L.circle(e.latlng, radius).addTo(map);
-      }
-
-      // map.on("locationfound", onLocationFound);
-
-      function onLocationError(e) {
-        alert(e.message);
-      }
-
-      // map.on("locationerror", onLocationError);
-      map.whenReady(() => {
-        console.log("map is ready to go at ", map);
-        DrawLine();
+        if (navigator.appVersion.includes("Android")) {
+          document.addEventListener("message", function (msg) {
+            ProcessMapRequest(msg);
+          });
+        } else {
+          window.addEventListener("message", function (msg) {
+            ProcessMapRequest(msg);
+            // alert(msg.data);
+          });
+        }
       });
 
-      // (function () {
-      //   document.addEventListener("message", function (msg) {
-      //     var mapDiv = document.getElementById("map");
-      //     mapDiv.style.height = "110px";
-      //     alert(msg.data);
-      //   });
-      // })();
-
-      if (navigator.appVersion.includes("Android")) {
-        document.addEventListener("message", function (msg) {
-          alert(msg.data);
-        });
-      } else {
-        window.addEventListener("message", function (msg) {
-          alert(msg.data);
-        });
+      function ProcessMapRequest(msg) {
+        let result = JSON.parse(msg.data);
+        switch (result.type) {
+          case "Destination":
+            geojson.features[0].geometry.coordinates = [];
+            map.getSource("line").setData(geojson);
+            waypoints = result.waypoints.data;
+            allLines = waypoints.features[0].geometry.coordinates[0];
+            totalWayPoints = allLines.length;
+            pointsAdded = 0;
+            DrawLine();
+            break;
+          case "Driver Destination":
+            geojson.features[0].geometry.coordinates = [];
+            map.getSource("line").setData(geojson);
+            waypoints = result.waypoints.data;
+            allLines = waypoints.features[0].geometry.coordinates[0];
+            totalWayPoints = allLines.length;
+            pointsAdded = 0;
+            DrawLine(true);
+            break;
+          case "Driver Location":
+            geojson.features[0].geometry.coordinates = [];
+            map.getSource("line").setData(geojson);
+            startPoint.remove();
+            endPoint.remove();
+            if (result.marker_rotation) {
+              DriverMarkerControl.setRotation(result.marker_rotation);
+            }
+            DriverMarkerControl.setLngLat([
+              result.driver_location.longitude,
+              result.driver_location.latitude,
+            ]).addTo(map);
+            map.flyTo({
+              center: [
+                result.driver_location.longitude,
+                result.driver_location.latitude,
+              ],
+              zoom: 16,
+            });
+            break;
+          case "Initial Pickup":
+            let mapCenter = map.getCenter();
+            PickupMarkerControl.setLngLat([mapCenter.lng, mapCenter.lat]);
+            break;
+          case "Pickup Location":
+            PickupType = result.pickup_type;
+            const pickUpCoords = PickupMarkerControl.getLngLat();
+            let newCenter = [pickUpCoords.lng, pickUpCoords.lat];
+            map.setZoom(18);
+            map.setCenter(newCenter);
+            PickupMarkerControl.setLngLat(newCenter).addTo(map);
+            pickupMakerIsVisible = true;
+            break;
+          case "Confirm Pickup":
+            PickupMarkerControl.remove();
+            pickupMakerIsVisible = false;
+            break;
+          case "Driver On Trip":
+            geolocate.trigger();
+            break;
+          case "On Trip":
+            DriverMarkerControl.setLngLat([
+              result.driver_location.longitude,
+              result.driver_location.latitude,
+            ]);
+            DriverMarkerControl.addTo(map);
+            map.flyTo({
+              center: [
+                result.driver_location.longitude,
+                result.driver_location.latitude,
+              ],
+              zoom: 16,
+            });
+            break;
+          case "Current Location":
+            startPoint.remove();
+            endPoint.remove();
+            geojson.features[0].geometry.coordinates = [];
+            map.getSource("line").setData(geojson);
+            geolocate.trigger();
+            break;
+          case "Start Trip":
+            // startPoint.remove()
+            endPoint.remove();
+            geolocate.trigger();
+            break;
+          case "End Trip":
+            startPoint.remove();
+            endPoint.remove();
+            geojson.features[0].geometry.coordinates = [];
+            map.getSource("line").setData(geojson);
+            geolocate.trigger();
+            break;
+          default:
+            // Reset Map
+            startPoint.remove();
+            endPoint.remove();
+            DriverMarkerControl.remove();
+            geojson.features[0].geometry.coordinates = [];
+            map.getSource("line").setData(geojson);
+            geolocate.trigger();
+            break;
+        }
       }
 
-      function send_message_to_native() {
-        window.ReactNativeWebView.postMessage(
-          JSON.stringify({ something: "saadsdsd" })
-        );
+      map.on("dragend", () => {
+        console.log("A dragend event occurred.");
+        if (pickupMakerIsVisible) {
+          let lngLat = map.getCenter();
+          send_message_to_native({
+            type: "Pickup Location",
+            longitude: lngLat.lng,
+            latitude: lngLat.lat,
+            pickup_type: PickupType,
+          });
+        }
+      });
+
+      map.on("move", () => {
+        // console.log("A move event occurred.");
+        if (pickupMakerIsVisible) {
+          const lngLat = map.getCenter();
+          PickupMarkerControl.setLngLat([lngLat.lng, lngLat.lat]).addTo(map);
+        }
+        // DriverMarkerControl.setLngLat([lngLat.lng, lngLat.lat]).addTo(map);
+      });
+
+      function send_message_to_native(data) {
+        window.ReactNativeWebView.postMessage(JSON.stringify(data));
       }
-      send_message_to_native();
+
+      // function ShowRoute() {
+      //   DrawLine();
+      // }
     </script>
   </body>
 </html>
