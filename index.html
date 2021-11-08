@@ -167,7 +167,13 @@
       geolocate.on("geolocate", (position) => {
         console.log("A geolocate event has occurred.");
         console.log(position.coords);
-
+        if (window.ReactNativeWebView)
+          window.ReactNativeWebView.postMessage(
+            JSON.stringify({
+              current_location: position.coords,
+              type: "User Location",
+            })
+          );
         // map.flyTo({
         //   center: [position.coords.longitude, position.coords.latitude],
         //   zoom: 16,
