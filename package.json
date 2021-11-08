@@ -1,0 +1,22 @@
+{
+  "name": "geoapify_maps",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "lite-server"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Caleb-Mantey/qwickride_map.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Caleb-Mantey/qwickride_map/issues"
+  },
+  "homepage": "https://github.com/Caleb-Mantey/qwickride_map#readme",
+  "dependencies": {
+    "lite-server": "^2.6.1"
+  }
+}
