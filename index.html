@@ -44,6 +44,7 @@
       let totalWayPoints;
       let pointsAdded;
       let PickupType;
+      let geolocate_circle;
 
       // Driver Marker
       var carMarker = document.createElement("img");
@@ -52,6 +53,10 @@
       carMarker.setAttribute(
         "src",
         "https://test.qwickride.com/map/car-aerial.png"
+      );
+      carMarker.setAttribute(
+        "class",
+        "mapboxgl-user-location-accuracy-circle mapboxgl-marker mapboxgl-marker-anchor-center"
       );
 
       var pickupMarker = document.createElement("div");
@@ -167,6 +172,8 @@
       geolocate.on("geolocate", (position) => {
         console.log("A geolocate event has occurred.");
         console.log(position.coords);
+        if (!geolocate_circle)
+          document.getElementsByClassName("mapboxgl-user-location")[0];
         if (window.ReactNativeWebView)
           window.ReactNativeWebView.postMessage(
             JSON.stringify({
@@ -284,9 +291,10 @@
             map.getSource("line").setData(geojson);
             startPoint.remove();
             endPoint.remove();
-            if (result.marker_rotation) {
-              DriverMarkerControl.setRotation(result.marker_rotation);
-            }
+            geolocate_circle.style.visibility = "hidden";
+            // if (result.marker_rotation) {
+            //   DriverMarkerControl.setRotation(result.marker_rotation);
+            // }
             DriverMarkerControl.setLngLat([
               result.driver_location.longitude,
               result.driver_location.latitude,
@@ -320,6 +328,7 @@
             geolocate.trigger();
             break;
           case "On Trip":
+            geolocate_circle.style.visibility = "hidden";
             DriverMarkerControl.setLngLat([
               result.driver_location.longitude,
               result.driver_location.latitude,
@@ -346,6 +355,7 @@
             geolocate.trigger();
             break;
           case "End Trip":
+            geolocate_circle.style.visibility = "visible";
             startPoint.remove();
             endPoint.remove();
             geojson.features[0].geometry.coordinates = [];
@@ -360,6 +370,7 @@
             geojson.features[0].geometry.coordinates = [];
             map.getSource("line").setData(geojson);
             geolocate.trigger();
+            geolocate_circle.style.visibility = "visible";
             break;
         }
       }
