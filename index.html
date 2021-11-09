@@ -45,14 +45,27 @@
       let pointsAdded;
       let PickupType;
       let geolocate_circle;
+      let geolocate_arrow;
       let isDriver = false;
       let users_location;
+      let device_coordinates;
+      let previous_driver_location;
 
       // Driver Marker
       var carMarker = document.createElement("img");
       carMarker.style.width = "35px";
       carMarker.style.height = "35px";
       carMarker.setAttribute(
+        "src",
+        "https://test.qwickride.com/map/car-aerial.png"
+      );
+
+      // Rider App On Trip Marker
+      var riderCarMarker = document.createElement("img");
+      riderCarMarker.style.width = "35px";
+      riderCarMarker.style.height = "35px";
+      riderCarMarker.style.visibility = "hidden";
+      riderCarMarker.setAttribute(
         "src",
         "https://test.qwickride.com/map/car-aerial.png"
       );
@@ -170,13 +183,21 @@
       geolocate.on("geolocate", (position) => {
         console.log("A geolocate event has occurred.");
         console.log(position.coords);
+        device_coordinates = position.coords;
         if (!geolocate_circle) {
           geolocate_circle = document.getElementsByClassName(
             "mapboxgl-user-location-dot"
           )[0];
+          geolocate_arrow = document.getElementsByClassName(
+            "mapboxgl-user-location-heading"
+          )[0];
           users_location = document.getElementsByClassName(
             "mapboxgl-user-location"
           )[0];
+          users_location.appendChild(riderCarMarker);
+          riderCarMarker.style.position = "absolute";
+          riderCarMarker.style.left = "-10px";
+          riderCarMarker.style.top = "-10px";
         }
         if (window.ReactNativeWebView)
           window.ReactNativeWebView.postMessage(
@@ -190,21 +211,63 @@
           );
       });
 
+      var geo = {
+        /**
+         * Calculate the bearing between two positions as a value from 0-360
+         *
+         * @param lat1 - The latitude of the first position
+         * @param lng1 - The longitude of the first position
+         * @param lat2 - The latitude of the second position
+         * @param lng2 - The longitude of the second position
+         *
+         * @return int - The bearing between 0 and 360
+         */
+        bearing: function (lat1, lng1, lat2, lng2) {
+          var dLon = this._toRad(lng2 - lng1);
+          var y = Math.sin(dLon) * Math.cos(this._toRad(lat2));
+          var x =
+            Math.cos(this._toRad(lat1)) * Math.sin(this._toRad(lat2)) -
+            Math.sin(this._toRad(lat1)) *
+              Math.cos(this._toRad(lat2)) *
+              Math.cos(dLon);
+          var brng = this._toDeg(Math.atan2(y, x));
+          return (brng + 360) % 360;
+        },
+
+        /**
+         * Since not all browsers implement this we have our own utility that will
+         * convert from degrees into radians
+         *
+         * @param deg - The degrees to be converted into radians
+         * @return radians
+         */
+        _toRad: function (deg) {
+          return (deg * Math.PI) / 180;
+        },
+
+        /**
+         * Since not all browsers implement this we have our own utility that will
+         * convert from radians into degrees
+         *
+         * @param rad - The radians to be converted into degrees
+         * @return degrees
+         */
+        _toDeg: function (rad) {
+          return (rad * 180) / Math.PI;
+        },
+      };
+
+      /** Usage **/
+      // var myInitialBearing = geo.bearing(0, 0, 45, 45);
+      // console.log("Bearing ", myInitialBearing);
+
       function DrawLine(isDriver = false) {
         var point = allLines[pointsAdded];
 
-        // geojson.features[0].geometry.coordinates.push([point[0], point[1]]);
         geojson.features[0].geometry.coordinates = allLines;
         // then update the map
         map.getSource("line").setData(geojson);
 
-        // map.flyTo({
-        //   center: [point[0], point[1]],
-        //   zoom: 15,
-        // });
-
-        // if (++pointsAdded < totalWayPoints) setTimeout(DrawLine, 1);
-        // else {
         const coordinates = geojson.features[0].geometry.coordinates;
 
         // Create a 'LngLatBounds' with both corners at the first coordinate.
@@ -227,7 +290,6 @@
           PickupMarkerControl.setLngLat(allLines[0]);
           if (!isDriver) startPoint.setLngLat(allLines[0]).addTo(map);
         }
-        // }
       }
 
       map.on("load", () => {
@@ -295,17 +357,28 @@
             startPoint.remove();
             endPoint.remove();
             geolocate_circle.style.visibility = "hidden";
-            if (result.marker_rotation) {
-              DriverMarkerControl.setRotation(result.marker_rotation);
+            geolocate_arrow.style.visibility = "hidden";
+            if (previous_driver_location) {
+              driver_bearing = geo.bearing(
+                previous_driver_location.latitude,
+                driver_location.longitude,
+                result.driver_location.longitude,
+                result.driver_location.latitude
+              );
+              DriverMarkerControl.setRotation(driver_bearing);
             }
             DriverMarkerControl.setLngLat([
               result.driver_location.longitude,
               result.driver_location.latitude,
             ]).addTo(map);
-            map.flyTo({
+            previous_driver_location = result.driver_location;
+            map.fitBounds({
               center: [
-                result.driver_location.longitude,
-                result.driver_location.latitude,
+                [
+                  result.driver_location.longitude,
+                  result.driver_location.latitude,
+                ],
+                [device_coordinates.longitude, device_coordinates.latitude],
               ],
               zoom: 16,
             });
@@ -338,18 +411,12 @@
             break;
           case "On Trip":
             geolocate_circle.style.visibility = "hidden";
-            DriverMarkerControl.setLngLat([
-              result.driver_location.longitude,
-              result.driver_location.latitude,
-            ]);
-            DriverMarkerControl.addTo(map);
-            map.flyTo({
-              center: [
-                result.driver_location.longitude,
-                result.driver_location.latitude,
-              ],
-              zoom: 16,
-            });
+            geolocate_arrow.style.visibility = "hidden";
+            riderCarMarker.style.visibility = "visible";
+            DriverMarkerControl.remove();
+            break;
+          case "Reset CarMarker":
+            riderCarMarker.style.visibility = "hidden";
             break;
           case "Current Location":
             startPoint.remove();
@@ -364,7 +431,8 @@
             geolocate.trigger();
             break;
           case "End Trip":
-            geolocate_circle.style.visibility = "visible";
+            // geolocate_circle.style.visibility = "visible";
+            // geolocate_arrow.style.visibility = "visible";
             startPoint.remove();
             endPoint.remove();
             geojson.features[0].geometry.coordinates = [];
@@ -372,11 +440,11 @@
             geolocate.trigger();
             break;
           case "DriverApp Instantiate":
-            // alert("Instantiate driver");
             isDriver = true;
             const waitForCarMarkerToLoad = setInterval(() => {
               if (users_location) {
                 // alert(users_location);
+                geolocate_arrow.style.visibility = "hidden";
                 users_location.appendChild(carMarker);
                 carMarker.style.position = "absolute";
                 carMarker.style.left = "-10px";
@@ -394,6 +462,8 @@
             map.getSource("line").setData(geojson);
             geolocate.trigger();
             geolocate_circle.style.visibility = "visible";
+            geolocate_arrow.style.visibility = "visible";
+            riderCarMarker.style.visibility = "hidden";
             break;
         }
       }
