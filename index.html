@@ -398,24 +398,10 @@
         }
       }
 
-      // map.on("dragend", () => {
-      //   console.log("A dragend event occurred.");
-      //   if (pickupMakerIsVisible) {
-      //     let lngLat = map.getCenter();
-      //     send_message_to_native({
-      //       type: "Pickup Location",
-      //       longitude: lngLat.lng,
-      //       latitude: lngLat.lat,
-      //       pickup_type: PickupType,
-      //     });
-      //   }
-      // });
-
-      map.on("move", () => {
-        // console.log("A move event occurred.");
+      map.on("moveend", () => {
+        console.log("A dragend event occurred.");
         if (pickupMakerIsVisible) {
-          const lngLat = map.getCenter();
-          PickupMarkerControl.setLngLat([lngLat.lng, lngLat.lat]).addTo(map);
+          let lngLat = map.getCenter();
           send_message_to_native({
             type: "Pickup Location",
             longitude: lngLat.lng,
@@ -423,16 +409,32 @@
             pickup_type: PickupType,
           });
         }
-        // DriverMarkerControl.setLngLat([lngLat.lng, lngLat.lat]).addTo(map);
+      });
+
+      map.on("movestart", () => {
+        console.log("A movestart` event occurred.");
+        if (pickupMakerIsVisible) {
+          let lngLat = map.getCenter();
+          send_message_to_native({
+            type: "Pickup Location",
+            longitude: lngLat.lng,
+            latitude: lngLat.lat,
+            pickup_type: PickupType,
+          });
+        }
+      });
+
+      map.on("move", () => {
+        // console.log("A move event occurred.");
+        if (pickupMakerIsVisible) {
+          const lngLat = map.getCenter();
+          PickupMarkerControl.setLngLat([lngLat.lng, lngLat.lat]).addTo(map);
+        }
       });
 
       function send_message_to_native(data) {
         window.ReactNativeWebView.postMessage(JSON.stringify(data));
       }
-
-      // function ShowRoute() {
-      //   DrawLine();
-      // }
     </script>
   </body>
 </html>
