@@ -322,6 +322,12 @@
             map.setCenter(newCenter);
             PickupMarkerControl.setLngLat(newCenter).addTo(map);
             pickupMakerIsVisible = true;
+            send_message_to_native({
+              type: "Pickup Location",
+              longitude: pickUpCoords.lng,
+              latitude: pickUpCoords.lat,
+              pickup_type: PickupType,
+            });
             break;
           case "Confirm Pickup":
             PickupMarkerControl.remove();
@@ -392,24 +398,30 @@
         }
       }
 
-      map.on("dragend", () => {
-        console.log("A dragend event occurred.");
-        if (pickupMakerIsVisible) {
-          let lngLat = map.getCenter();
-          send_message_to_native({
-            type: "Pickup Location",
-            longitude: lngLat.lng,
-            latitude: lngLat.lat,
-            pickup_type: PickupType,
-          });
-        }
-      });
+      // map.on("dragend", () => {
+      //   console.log("A dragend event occurred.");
+      //   if (pickupMakerIsVisible) {
+      //     let lngLat = map.getCenter();
+      //     send_message_to_native({
+      //       type: "Pickup Location",
+      //       longitude: lngLat.lng,
+      //       latitude: lngLat.lat,
+      //       pickup_type: PickupType,
+      //     });
+      //   }
+      // });
 
       map.on("move", () => {
         // console.log("A move event occurred.");
         if (pickupMakerIsVisible) {
           const lngLat = map.getCenter();
           PickupMarkerControl.setLngLat([lngLat.lng, lngLat.lat]).addTo(map);
+          send_message_to_native({
+            type: "Pickup Location",
+            longitude: lngLat.lng,
+            latitude: lngLat.lat,
+            pickup_type: PickupType,
+          });
         }
         // DriverMarkerControl.setLngLat([lngLat.lng, lngLat.lat]).addTo(map);
       });
