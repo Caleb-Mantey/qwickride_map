@@ -45,6 +45,8 @@
       let pointsAdded;
       let PickupType;
       let geolocate_circle;
+      let isDriver = false;
+      let users_location;
 
       // Driver Marker
       var carMarker = document.createElement("img");
@@ -53,10 +55,6 @@
       carMarker.setAttribute(
         "src",
         "https://test.qwickride.com/map/car-aerial.png"
-      );
-      carMarker.setAttribute(
-        "class",
-        "mapboxgl-user-location-accuracy-circle mapboxgl-marker mapboxgl-marker-anchor-center"
       );
 
       var pickupMarker = document.createElement("div");
@@ -81,7 +79,7 @@
       innerCircle.style.height = "10px";
       innerCircle.style.backgroundColor = "white";
       innerCircle.style.borderRadius = "10px";
-      innerCircle.s;
+      // innerCircle.s;
 
       var tipLine = document.createElement("div");
       tipLine.style.width = "2px";
@@ -172,19 +170,24 @@
       geolocate.on("geolocate", (position) => {
         console.log("A geolocate event has occurred.");
         console.log(position.coords);
-        if (!geolocate_circle)
-          document.getElementsByClassName("mapboxgl-user-location")[0];
+        if (!geolocate_circle) {
+          geolocate_circle = document.getElementsByClassName(
+            "mapboxgl-user-location-dot"
+          )[0];
+          users_location = document.getElementsByClassName(
+            "mapboxgl-user-location"
+          )[0];
+        }
         if (window.ReactNativeWebView)
           window.ReactNativeWebView.postMessage(
             JSON.stringify({
-              current_location: position.coords,
+              current_location: {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+              },
               type: "User Location",
             })
           );
-        // map.flyTo({
-        //   center: [position.coords.longitude, position.coords.latitude],
-        //   zoom: 16,
-        // });
       });
 
       function DrawLine(isDriver = false) {
@@ -252,18 +255,18 @@
         });
 
         document.getElementsByClassName("mapboxgl-ctrl-logo")[0].href = "#";
-
-        if (navigator.appVersion.includes("Android")) {
-          document.addEventListener("message", function (msg) {
-            ProcessMapRequest(msg);
-          });
-        } else {
-          window.addEventListener("message", function (msg) {
-            ProcessMapRequest(msg);
-            // alert(msg.data);
-          });
-        }
       });
+
+      if (navigator.appVersion.includes("Android")) {
+        document.addEventListener("message", function (msg) {
+          ProcessMapRequest(msg);
+        });
+      } else {
+        window.addEventListener("message", function (msg) {
+          ProcessMapRequest(msg);
+          // alert(msg.data);
+        });
+      }
 
       function ProcessMapRequest(msg) {
         let result = JSON.parse(msg.data);
@@ -292,9 +295,9 @@
             startPoint.remove();
             endPoint.remove();
             geolocate_circle.style.visibility = "hidden";
-            // if (result.marker_rotation) {
-            //   DriverMarkerControl.setRotation(result.marker_rotation);
-            // }
+            if (result.marker_rotation) {
+              DriverMarkerControl.setRotation(result.marker_rotation);
+            }
             DriverMarkerControl.setLngLat([
               result.driver_location.longitude,
               result.driver_location.latitude,
@@ -362,11 +365,25 @@
             map.getSource("line").setData(geojson);
             geolocate.trigger();
             break;
+          case "DriverApp Instantiate":
+            // alert("Instantiate driver");
+            isDriver = true;
+            const waitForCarMarkerToLoad = setInterval(() => {
+              if (users_location) {
+                // alert(users_location);
+                users_location.appendChild(carMarker);
+                carMarker.style.position = "absolute";
+                carMarker.style.left = "-10px";
+                carMarker.style.top = "-10px";
+                clearInterval(waitForCarMarkerToLoad);
+              }
+            }, 3000);
+            break;
           default:
             // Reset Map
             startPoint.remove();
             endPoint.remove();
-            DriverMarkerControl.remove();
+            if (!isDriver) DriverMarkerControl.remove();
             geojson.features[0].geometry.coordinates = [];
             map.getSource("line").setData(geojson);
             geolocate.trigger();
