@@ -151,7 +151,7 @@
       };
 
       mapboxgl.accessToken =
-        "pk.eyJ1IjoiY2FsZWIxMjNlZGVtIiwiYSI6ImNqb2hzd2cwYzAxb2czdmxmbjRrcTlkOWYifQ.nKUP4PQMhmaRHelK4XTucg";
+        "pk.eyJ1IjoicXdpY2tyaWRlIiwiYSI6ImNrdnNxMjkydTRwemoycHE1OGg0eW1sdGgifQ.LcvdNRpj_GxkP0GSz3Xz6A";
 
       var map = new mapboxgl.Map({
         container: "map",
@@ -445,6 +445,7 @@
               if (users_location) {
                 // alert(users_location);
                 geolocate_arrow.style.visibility = "hidden";
+                geolocate_circle.style.visibility = "hidden";
                 users_location.appendChild(carMarker);
                 carMarker.style.position = "absolute";
                 carMarker.style.left = "-10px";
@@ -457,13 +458,15 @@
             // Reset Map
             startPoint.remove();
             endPoint.remove();
-            if (!isDriver) DriverMarkerControl.remove();
+            if (!isDriver) {
+              DriverMarkerControl.remove();
+              geolocate_circle.style.visibility = "visible";
+              geolocate_arrow.style.visibility = "visible";
+              riderCarMarker.style.visibility = "hidden";
+            }
             geojson.features[0].geometry.coordinates = [];
             map.getSource("line").setData(geojson);
             geolocate.trigger();
-            geolocate_circle.style.visibility = "visible";
-            geolocate_arrow.style.visibility = "visible";
-            riderCarMarker.style.visibility = "hidden";
             break;
         }
       }
